@@ -17,14 +17,14 @@ func Register(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email and Password are required"})
 		return
 	}
 
 	var existingUser models.User
 	if err := config.DB.Where("email = ?", body.Email).First(&existingUser).Error; err == nil {
 		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
-		return // Stop execution
+		return
 	}
 
 	//Password Hashing
@@ -39,7 +39,7 @@ func Register(c *gin.Context) {
 
 	tx := config.DB.Begin()
 	if tx.Error != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start database transaction"})
 		return
 	}
 
@@ -48,26 +48,12 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
-	result := config.DB.Create(&user)
-
-	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create player, email is already in use"})
-	}
-
-	//Player Profile Created
-	playerProfile := models.PlayerProfile{UserId: user.ID}
-	if err := tx.Create(&playerProfile).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create player profile"})
-		return
-	}
-
+	
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
 		return
 	}
-	config.DB.Create(&playerProfile)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Welcome Player"})
 }
