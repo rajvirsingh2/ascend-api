@@ -12,14 +12,8 @@ import (
 
 var DB *gorm.DB
 
-// Connects to the database and performs auto-mitigation
-
 func ConnectDB() {
-	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file	")
-	}
+	godotenv.Load()
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
 		os.Getenv("DB_HOST"),
@@ -29,7 +23,11 @@ func ConnectDB() {
 		os.Getenv("DB_PORT"),
 	)
 
+	// --- THE FIX IS HERE ---
+	// Declare the 'err' variable before using it for assignment.
+	var err error
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+
 	if err != nil {
 		log.Fatal("Failed to connect to Database")
 	}
